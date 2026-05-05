@@ -2493,10 +2493,12 @@
         const label = _STATUS_LABEL[st] || st.toUpperCase();
         const fillClass = st === 'done' ? 'done' : st === 'failed' ? 'failed' : '';
         const canKill = st === 'running' || st === 'planning';
+        const canRetry = st === 'failed' || st === 'running';
         return `<div class="proj-card" id="proj-${p.id}">
           <div class="proj-row1">
             <div class="proj-title">${p.title || 'Mission…'}</div>
             <span class="proj-badge ${st}">${label}</span>
+            ${canRetry ? `<button class="proj-kill" onclick="retryProject('${p.id}')" title="Relancer depuis l'étape bloquée" style="color:#60a5fa">↺</button>` : ''}
             ${canKill ? `<button class="proj-kill" onclick="killProject('${p.id}')" title="Arrêter">✕</button>` : ''}
           </div>
           <div class="proj-row2">
@@ -2513,6 +2515,12 @@
         if (_projects[id]) _projects[id].status = 'killed';
         _renderProjects();
       } catch (e) { console.warn('kill project error', e); }
+    }
+
+    async function retryProject(id) {
+      try {
+        await fetch(`/api/projects/${id}/retry`, { method: 'POST' });
+      } catch (e) { console.warn('retry project error', e); }
     }
 
     function _showApproval(msg) {

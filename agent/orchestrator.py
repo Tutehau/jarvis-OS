@@ -59,6 +59,55 @@ class ProjectOrchestrator:
         worker.kill()
         return True
 
+    # ── Retry ─────────────────────────────────────────────────────────────────
+
+    async def retry_project(self, project_id: str) -> Project | None:
+        """Remet le projet en running depuis la première étape bloquée/failed."""
+        from agent.schemas import ProjectStatus, StepStatus
+
+        # Tuer le worker actuel si encore vivant
+        if w := self._workers.get(project_id):
+            w.kill()
+
+        project = self._store.load_project(project_id)
+        if not project:
+            return None
+
+        # Remettre les étapes "running" ou "failed" en pending
+        reset = False
+        for step in project.steps:
+            if step.status in (StepStatus.RUNNING, StepStatus.FAILED):
+                step.status = StepStatus.PENDING
+                step.error = None
+                step.output = None
+                step.started_at = None
+                step.completed_at = None
+                if not reset:
+                    reset = True
+
+        project.status = ProjectStatus.RUNNING
+        self._store.save_project(project)
+
+        worker = WorkerAgent(
+            project=project,
+            store=self._store,
+            broadcast_event=self._broadcast,
+            approval_callback=self._request_approval,
+        )
+        self._workers[project_id] = worker
+
+        self._broadcast({
+            "type":    "project_update",
+            "project": self._project_summary(project),
+        })
+
+        asyncio.create_task(
+            asyncio.wait_for(worker.run(), timeout=project.timeout_minutes * 60),
+            name=f"retry-{project_id}",
+        )
+        logger.info("Project retried", id=project_id)
+        return project
+
     # ── Approval system ───────────────────────────────────────────────────────
 
     async def _request_approval(

@@ -219,6 +219,54 @@ Pour `[BG:PROJECT]`, le worker agent doit :
 - 10 cm → `createByReal(10)`
 - 100 mm → `createByReal(10)`
 
+**INTERDICTIONS (provoquent des RuntimeError) :**
+- `root.name = "..."` ou `rootComponent.name = "..."` → lecture seule, interdit
+- `root.occurrences.addNewComponent(...)` → interdit en mode Part (pas Assemblage)
+- Pour nommer : `body.name = "MonNom"` sur les BRepBody uniquement
+
+**Shell feature (évidement) — patron obligatoire :**
+`shellFeatures.add()` échoue si les faces sont mal collectées. Toujours trouver la face d'ouverture par position Z maximale :
+```python
+body = root.bRepBodies.item(0)
+# Trouver la face du dessus (Z max)
+top_face = max(body.faces, key=lambda f: f.centroid.z)
+faces = adsk.core.ObjectCollection.create()
+faces.add(top_face)
+shellInput = root.features.shellFeatures.createInput(faces, False)
+shellInput.insideThickness = adsk.core.ValueInput.createByReal(0.15)  # épaisseur en cm
+root.features.shellFeatures.add(shellInput)
+```
+- Ne jamais utiliser `faces.item(0)` directement sans vérifier que c'est la bonne face
+- `insideThickness` doit être > 0 et strictement inférieur à la moitié de la plus petite dimension du body
+- Si le body vient d'être créé dans le même script : appeler `design.rootComponent.bRepBodies.item(0)` après le `ext.add(inp)`, pas avant
+
+**Cut / découpe (CutFeatureOperation) — patron obligatoire :**
+`"Aucun corps cible trouvé"` = le profil ne touche pas le body, ou `participantBodies` manquant.
+```python
+body = root.bRepBodies.item(0)  # le corps à découper
+
+# Sketch sur la FACE du body (pas sur un plan de construction)
+face = max(body.faces, key=lambda f: f.centroid.z)  # face du dessus, ou choisir selon l'axe
+sketch = root.sketches.add(face)
+# ... dessiner le profil de découpe ...
+
+ext_input = root.features.extrudeFeatures.createInput(
+    sketch.profiles.item(0),
+    adsk.fusion.FeatureOperations.CutFeatureOperation
+)
+# Direction : vers l'intérieur du body (négatif = vers le bas si face du dessus)
+ext_input.setDistanceExtent(False, adsk.core.ValueInput.createByReal(-depth_cm))
+# Toujours spécifier explicitement le body cible
+bodies_col = adsk.core.ObjectCollection.create()
+bodies_col.add(body)
+ext_input.participantBodies = bodies_col
+root.features.extrudeFeatures.add(ext_input)
+```
+- Sketch sur une **face du body** (`root.sketches.add(face)`) et non sur `root.xYConstructionPlane`
+- `participantBodies` doit toujours être défini pour les Cut
+- Direction négative si la face choisie est le dessus, positive si c'est le dessous
+- Alternative : `setAllExtent(adsk.fusion.ExtentDirections.NegativeExtentDirection)` pour traverser tout le body
+
 **Template de script (toujours partir de ce patron) :**
 ```python
 import adsk.core, adsk.fusion, traceback
@@ -226,12 +274,35 @@ import adsk.core, adsk.fusion, traceback
 def run(context):
     try:
         app = adsk.core.Application.get()
+        # Cibler le bon document si plusieurs sont ouverts
         design = adsk.fusion.Design.cast(app.activeProduct)
         root = design.rootComponent
         # ... ton code ici ...
     except:
         adsk.core.Application.get().userInterface.messageBox(traceback.format_exc())
 ```
+
+**RÈGLE CRITIQUE — document actif :**
+Fusion 360 peut avoir plusieurs documents ouverts. TOUJOURS commencer chaque script par ce bloc :
+```python
+app = adsk.core.Application.get()
+# S'il existe un doc avec de la géométrie, l'activer — sinon rester sur l'actif
+for doc in app.documents:
+    try:
+        if doc.documentType == adsk.core.DocumentTypes.FusionDesignDocumentType:
+            d = adsk.fusion.Design.cast(doc.product)
+            if d and d.rootComponent.bRepBodies.count > 0:
+                if not doc.isActive:
+                    doc.activate()
+                break
+    except Exception:
+        pass
+# NE JAMAIS appeler app.documents.add() — cela crée un nouveau fichier vide à chaque appel
+design = adsk.fusion.Design.cast(app.activeProduct)
+root = design.rootComponent
+```
+**Logique** : doc avec body trouvé → l'activer. Aucun body nulle part → travailler sur l'actif (c'est normal au début du projet).
+**JAMAIS `app.documents.add()`** sauf instruction explicite "crée un nouveau document".
 
 **Exemples :**
 

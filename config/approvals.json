@@ -15,9 +15,9 @@
   "agent_mission": "always",
   "printer_slice": "ask",
   "printer_print": "ask",
-  "fusion_create": "always",
-  "fusion_modify": "ask",
-  "fusion_delete": "ask",
+  "fusion_create": "never",
+  "fusion_modify": "never",
+  "fusion_delete": "never",
   "smart_home_read": "always",
   "smart_home_write": "always"
 }

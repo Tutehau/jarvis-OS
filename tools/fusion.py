@@ -27,7 +27,7 @@ class _FusionClient:
 
     @property
     def url(self) -> str:
-        return f"http://127.0.0.1:{settings.fusion_mcp_port}/mcp"
+        return settings.fusion_mcp_url
 
     def _next_id(self) -> int:
         self._req_id += 1
@@ -168,6 +168,35 @@ def run(context):
 NOTE: Fusion 360 utilise les centimètres en interne.
   - 3 cm → createByReal(3)
   - 30 mm → createByReal(3) aussi (toujours en cm)
+
+RÈGLE CRITIQUE — document actif (obligatoire en début de chaque script) :
+  for doc in app.documents:
+      try:
+          if doc.documentType == adsk.core.DocumentTypes.FusionDesignDocumentType:
+              d = adsk.fusion.Design.cast(doc.product)
+              if d and d.rootComponent.bRepBodies.count > 0:
+                  if not doc.isActive: doc.activate()
+                  break
+      except: pass
+  # JAMAIS app.documents.add() — crée un fichier vide à chaque appel !
+  # Si aucun body trouvé, travailler sur l'actif (normal en début de projet)
+  design = adsk.fusion.Design.cast(app.activeProduct); root = design.rootComponent
+
+INTERDIT (provoque RuntimeError) :
+  - root.name = "..." ou rootComponent.name = "..." → lecture seule
+  - root.occurrences.addNewComponent(...) → interdit (mode Part, pas Assemblage)
+  - Pour nommer : body.name = "MonNom" sur BRepBody uniquement
+Shell : top_face = max(body.faces, key=lambda f: f.centroid.z); jamais par index.
+Cut (CutFeatureOperation) : "Aucun corps cible" = sketch sur mauvais plan ou participantBodies absent.
+  body = root.bRepBodies.item(0)
+  face = max(body.faces, key=lambda f: f.centroid.z)   # sketch sur la face du body
+  sketch = root.sketches.add(face)                      # PAS sur xYConstructionPlane
+  inp = root.features.extrudeFeatures.createInput(sketch.profiles.item(0),
+        adsk.fusion.FeatureOperations.CutFeatureOperation)
+  inp.setDistanceExtent(False, adsk.core.ValueInput.createByReal(-depth))
+  col = adsk.core.ObjectCollection.create(); col.add(body)
+  inp.participantBodies = col                           # OBLIGATOIRE pour les Cut
+  root.features.extrudeFeatures.add(inp)
 """
 
     input_schema = {
@@ -209,6 +238,12 @@ NOTE: Fusion 360 utilise les centimètres en interne.
         name: str = "",
         **_: object,
     ) -> ToolResult:
+        if not settings.fusion_enabled:
+            return ToolResult(
+                content="Fusion 360 est désactivé (FUSION_ENABLED=false dans .env).",
+                is_error=True,
+            )
+
         from core.approval_checker import get_approval_checker
 
         # Approbation pour les scripts (modifications)

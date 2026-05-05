@@ -29,17 +29,29 @@ Types de projet :
 - "website"       : site HTML/CSS/JS, landing page, portfolio
 - "python_script" : script Python, automatisation, traitement de données
 - "content"       : document, rapport, contenu textuel
+- "fusion_360"    : modélisation 3D dans Autodesk Fusion 360
 - "generic"       : tout autre type
+
+Règles spéciales pour fusion_360 :
+- Détecte fusion_360 si la demande mentionne Fusion 360, CAO, modélisation 3D, impression 3D, STL, coque, boîtier, pièce 3D, etc.
+- Chaque étape doit décrire EXACTEMENT l'opération Fusion 360 à faire avec l'outil fusion_360.
+- NE PAS utiliser execute_cli ou write_file pour des tâches Fusion 360.
+- L'agent dispose de l'outil fusion_360(action="execute_script", script="...") pour exécuter des scripts Python Fusion API.
+- Les scripts Fusion utilisent adsk.core, adsk.fusion, et les CENTIMÈTRES (10mm → createByReal(1)).
+- Chaque étape = une opération (sketch, extrusion, fillet, shell, export STL, etc.)
+- Toujours prendre un screenshot après les opérations importantes.
+- requires_network=false (Fusion est local)
+- Exemple de description d'étape Fusion : "Créer le sketch de base 14.3x7.1 cm sur le plan XY, puis l'extruder de 1.5 cm vers le haut avec l'outil fusion_360."
 
 Réseau :
 - requires_network=true si le projet nécessite internet (npm install, pip install, API externe,
   téléchargement de ressources)
-- requires_network=false pour tout ce qui est faisable offline
+- requires_network=false pour tout ce qui est faisable offline (dont Fusion 360)
 
 Réponds UNIQUEMENT avec du JSON valide (sans markdown, sans commentaires) :
 {
   "title": "Titre court du projet (< 40 chars)",
-  "project_type": "website|python_script|content|generic",
+  "project_type": "website|python_script|content|fusion_360|generic",
   "requires_network": false,
   "steps": [
     {
@@ -60,7 +72,8 @@ class ProjectManager:
 
     async def create_project(self, mission: str, timeout_minutes: int = 30) -> Project:
         from llm.api import AnthropicProvider
-        llm = AnthropicProvider(max_tokens=2048)
+        from config.settings import settings
+        llm = AnthropicProvider(max_tokens=2048, model=settings.voice_anthropic_model)
 
         logger.info("ProjectManager planning", mission=mission[:80])
 
@@ -127,7 +140,8 @@ class ProjectManager:
         }
 
         steps.append(test_step)
-        steps.append(rapport_step)
+        if project_type != "fusion_360":
+            steps.append(rapport_step)
         plan["steps"] = steps
         return plan
 
@@ -172,6 +186,19 @@ class ProjectManager:
                     "2. Vérifier la cohérence entre les fichiers (références croisées, numérotation, etc.). "
                     "3. Vérifier que l'objectif initial de la mission est atteint. "
                     "4. Corriger toute incohérence détectée."
+                ),
+                "requires_approval": False,
+            }
+
+        if project_type == "fusion_360":
+            return {
+                "id": step_id,
+                "title": "Vérification finale Fusion 360",
+                "description": (
+                    "1. Prendre un screenshot isométrique avec fusion_360(action='read', query_type='screenshot', direction='iso-top-right'). "
+                    "2. Vérifier que la géométrie est visible et conforme à l'objectif. "
+                    "3. Si un problème est détecté (géométrie manquante, erreur), utiliser fusion_360(action='undo') et corriger. "
+                    "4. Prendre un screenshot final depuis le dessus (direction='top') pour confirmer."
                 ),
                 "requires_approval": False,
             }

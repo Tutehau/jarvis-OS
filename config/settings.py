@@ -205,9 +205,13 @@ class Settings(BaseSettings):
     )
 
     # ── Fusion 360 MCP ────────────────────────────────────────
-    fusion_mcp_port: int = Field(
-        default=27182,
-        description="Port du serveur MCP Fusion 360 (visible dans Fusion → Préférences → Add-Ins).",
+    fusion_enabled: bool = Field(
+        default=False,
+        description="Active l'intégration Fusion 360 (MCP HTTP).",
+    )
+    fusion_mcp_url: str = Field(
+        default="http://127.0.0.1:27182/mcp",
+        description="URL complète du serveur MCP Fusion 360.",
     )
 
     # ── Face Recognition ──────────────────────────────────────

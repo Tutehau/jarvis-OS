@@ -30,15 +30,32 @@ Outils disponibles :
 - list_files(directory) : lister les fichiers (directory optionnel, défaut ".")
 - execute_cli(command, timeout?) : exécuter une commande shell (whitelist stricte)
 - create_directory(path) : créer un répertoire
+- fusion_360(action, ...) : contrôler Autodesk Fusion 360 (si le projet l'exige)
+  - action="execute_script", script="..." : exécuter un script Python Fusion API
+  - action="read", query_type="screenshot" : capturer la vue actuelle
+  - action="undo" / action="redo"
+  IMPORTANT Fusion 360 : les scripts doivent contenir def run(context): et utiliser adsk.core/adsk.fusion.
+  Fusion utilise les centimètres (3 cm → createByReal(3)). Toujours vérifier avec un screenshot après.
+  OBLIGATOIRE en début de chaque script Fusion : chercher un doc avec bRepBodies.count > 0 et l'activer.
+  Si aucun body trouvé, travailler sur l'actif — JAMAIS app.documents.add() (crée un fichier vide à chaque fois !).
+  Ne jamais supposer que app.activeProduct est le bon document.
+  INTERDIT : root.name, rootComponent.name (lecture seule), addNewComponent() (mode Part pas Assemblage).
+  Nommer avec body.name = "..." uniquement. Mode Pièce : travailler sur rootComponent directement.
+  Shell : top_face = max(body.faces, key=lambda f: f.centroid.z) — jamais par index brut.
+  Cut (CutFeatureOperation) : "Aucun corps cible" = sketch sur mauvais plan ou participantBodies absent.
+    Sketch TOUJOURS sur une face du body (root.sketches.add(face)), pas sur xYConstructionPlane.
+    Définir inp.participantBodies = ObjectCollection contenant le body cible — OBLIGATOIRE pour Cut.
 
 Règles absolues :
 - Exécute UNIQUEMENT l'étape demandée
+- Pour les tâches Fusion 360 : utilise fusion_360, JAMAIS execute_cli
 - Ne tente jamais d'accéder à des fichiers hors du workspace
 - Si un outil échoue, analyse l'erreur et adapte-toi ou retourne une erreur claire
-- Retourne un résumé concis de ce que tu as accompli
+- Retourne UN RÉSUMÉ D'UNE LIGNE maximum — pas de markdown, pas de tableaux, pas de sections
 - Ne relis pas les fichiers que tu viens de créer sauf si tu as besoin de leur contenu pour la suite
 - Ne recrée pas des répertoires qui existent déjà
-- Commence directement par l'action principale (write_file, execute_cli) sans explorer inutilement
+- Commence directement par l'action principale (write_file, execute_cli, fusion_360) sans explorer inutilement
+- INTERDIT : générer des rapports, tableaux markdown, ou analyses détaillées dans ta réponse finale
 
 Contexte projet :
 {context}
@@ -93,6 +110,44 @@ _WORKER_TOOLS: list[dict] = [
             "type": "object",
             "properties": {"path": {"type": "string"}},
             "required": ["path"],
+        },
+    },
+    {
+        "name": "fusion_360",
+        "description": (
+            "Contrôle Autodesk Fusion 360 via MCP (port 27182). "
+            "Utiliser pour toute tâche de modélisation 3D. "
+            "Les scripts doivent contenir def run(context): et utiliser adsk.core/adsk.fusion. "
+            "Unités : centimètres (3 cm → createByReal(3))."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["execute_script", "read", "undo", "redo"],
+                    "description": "Action Fusion 360 à effectuer",
+                },
+                "script": {
+                    "type": "string",
+                    "description": "Script Python Fusion API complet avec def run(context): (requis pour execute_script)",
+                },
+                "query_type": {
+                    "type": "string",
+                    "enum": ["screenshot", "document", "projects", "apiDocumentation"],
+                    "description": "Type de lecture (pour action=read)",
+                },
+                "direction": {
+                    "type": "string",
+                    "enum": ["current", "front", "back", "top", "bottom", "left", "right", "iso-top-right"],
+                    "description": "Direction caméra pour screenshot",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Terme de recherche pour query_type=document",
+                },
+            },
+            "required": ["action"],
         },
     },
 ]
@@ -161,6 +216,8 @@ class WorkerAgent:
 
         try:
             for step in project.steps:
+                if step.status in (StepStatus.DONE, StepStatus.SKIPPED):
+                    continue  # déjà complétée — on ne re-exécute pas
                 if self._killed:
                     project.status = ProjectStatus.KILLED
                     break
@@ -222,12 +279,14 @@ class WorkerAgent:
 
         # Exécution via LLM tool-loop
         self._files_snapshot = self._file_tool.list_files()
+        is_fusion = "fusion" in self._project.mission.lower() or "fusion" in self._project.title.lower()
         try:
             result = await asyncio.wait_for(self._run_step_llm(step), timeout=300)
             step.status       = StepStatus.DONE
             step.output       = result
             step.completed_at = datetime.now()
-            await self._post_step_check(step)
+            if not is_fusion:  # quality check inutile pour Fusion (pas de fichiers)
+                await self._post_step_check(step)
             await self._log("info", f"✓ {step.title}", step_id=step.id, data={"output": result[:300]})
         except asyncio.TimeoutError:
             step.status = StepStatus.FAILED
@@ -245,8 +304,13 @@ class WorkerAgent:
 
     async def _run_step_llm(self, step: Step) -> str:
         from llm.api import AnthropicProvider
+        from config.settings import settings
 
-        llm = AnthropicProvider(max_tokens=8192)
+        # Haiku pour le worker : 20x moins cher que Sonnet, largement suffisant
+        llm = AnthropicProvider(
+            max_tokens=1024,
+            model=settings.voice_anthropic_model,  # claude-haiku-4-5-20251001
+        )
         self._project.llm_calls += 1
 
         existing = self._file_tool.list_files()
@@ -326,6 +390,16 @@ class WorkerAgent:
                 if res["success"]:
                     return res["stdout"] or "(commande exécutée, pas de sortie)"
                 return f"ERREUR (rc={res['returncode']}) : {res['stderr']}"
+
+            if name == "fusion_360":
+                from tools.fusion import FusionTool
+                action = inputs.get("action", "")
+                await self._log("tool", f"fusion_360: {action}", data={"inputs": str(inputs)[:120]})
+                tool = FusionTool()
+                result = await tool.execute(**inputs)
+                if result.is_error:
+                    await self._log("error", f"fusion_360 erreur: {result.content[:200]}")
+                return result.content
 
             return f"Outil inconnu : {name}"
 

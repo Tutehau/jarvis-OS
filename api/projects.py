@@ -74,6 +74,42 @@ async def kill_project(project_id: str, request: Request) -> dict:
     return {"killed": True}
 
 
+@router.post("/api/projects/{project_id}/retry")
+async def retry_project(project_id: str, request: Request) -> dict:
+    orch = _orch(request)
+    project = await orch.retry_project(project_id)
+    if not project:
+        raise HTTPException(404, f"Projet non trouvé : {project_id}")
+    return {"ok": True, "project_id": project.id, "status": project.status}
+
+
+class ResetStepsBody(BaseModel):
+    step_ids: list[str]
+
+
+@router.post("/api/projects/{project_id}/reset-steps")
+async def reset_steps(project_id: str, body: ResetStepsBody, request: Request) -> dict:
+    """Remet des étapes spécifiques en pending (sans relancer le worker)."""
+    from agent.project_store import ProjectStore, WORKSPACE_DIR
+    from agent.schemas import StepStatus
+    import json
+    state_file = WORKSPACE_DIR / project_id / ".jarvis" / "state.json"
+    if not state_file.exists():
+        raise HTTPException(404, f"Projet non trouvé : {project_id}")
+    d = json.loads(state_file.read_text(encoding="utf-8"))
+    reset = []
+    for s in d["steps"]:
+        if s["id"] in body.step_ids:
+            s["status"] = "pending"
+            s["output"] = None
+            s["error"] = None
+            s["started_at"] = None
+            s["completed_at"] = None
+            reset.append(s["id"])
+    state_file.write_text(json.dumps(d, indent=2), encoding="utf-8")
+    return {"reset": reset}
+
+
 @router.post("/api/projects/{project_id}/approve")
 async def approve_step(project_id: str, body: ApprovalBody, request: Request) -> dict:
     orch = _orch(request)

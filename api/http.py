@@ -397,6 +397,17 @@ async def system_logs() -> list[str]:
     return list(_log_buffer)
 
 
+@router.post("/api/projects/{project_id}/retry")
+async def retry_project(project_id: str, request: Request) -> dict:
+    orchestrator = getattr(request.app.state, "orchestrator", None)
+    if not orchestrator:
+        raise HTTPException(status_code=503, detail="Orchestrateur non disponible")
+    project = await orchestrator.retry_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Projet non trouvé")
+    return {"ok": True, "project_id": project.id, "status": project.status}
+
+
 @router.delete("/api/system/projects/done")
 async def cleanup_done_projects(request: Request) -> dict:
     from agent.project_store import WORKSPACE_DIR
