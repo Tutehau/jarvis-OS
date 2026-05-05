@@ -1,22 +1,22 @@
 # Jarvis OS
 
-Personal AI assistant — text & real-time voice, self-hosted, fully open stack.
+Assistant personnel IA — texte & voix temps réel, self-hosted, stack open source.
 
 ---
 
-## What is it?
+## C'est quoi ?
 
-Jarvis is a personal AI assistant running locally. It exposes a FastAPI server that handles both a text chat interface and a real-time voice pipeline (via LiveKit). It connects to the LLM of your choice, remembers conversations, uses tools (web search, Gmail, Google Calendar, Spotify, vision, code execution…) and runs background proactive tasks (weather alerts, news digests, etc.).
+Jarvis est un assistant personnel IA qui tourne en local. Il expose un serveur FastAPI qui gère à la fois une interface de chat texte et un pipeline vocal temps réel (via LiveKit). Il se connecte au LLM de ton choix, mémorise les conversations, utilise des outils (recherche web, Gmail, Google Calendar, Spotify, vision, exécution de code…) et fait tourner des tâches proactives en arrière-plan (alertes météo, digests d'actualités, etc.).
 
-**Key features:**
+**Fonctionnalités principales :**
 
-- Real-time voice pipeline — STT (Whisper/Deepgram) + LLM + TTS (Piper/ElevenLabs), bridged via LiveKit
-- Persistent memory — sessions, topics, auto-consolidation (nightly "dream" pass), vector search
-- Tool use — browser, Gmail, Google Calendar, Notion, Spotify, CLI runner, filesystem, vision (YOLOv8), weather
-- Skills system — pluggable autonomous modules (e.g. web researcher)
-- Proactive engine — background agent that sends notifications on triggers (weather, news…)
-- Multi-LLM — Anthropic Claude, Mistral, Google Gemini, or local Ollama models
-- Admin UI — web dashboard, globe widget, control panel
+- Pipeline vocal temps réel — STT (Whisper/Deepgram) + LLM + TTS (Piper/ElevenLabs), bridgé via LiveKit
+- Mémoire persistante — sessions, topics, auto-consolidation (passe "rêve" nocturne), recherche vectorielle
+- Utilisation d'outils — navigateur, Gmail, Google Calendar, Notion, Spotify, runner CLI, filesystem, vision (YOLOv8), météo
+- Système de skills — modules autonomes pluggables (ex : chercheur web)
+- Moteur proactif — agent en arrière-plan qui envoie des notifications sur déclencheurs (météo, actualités…)
+- Multi-LLM — Anthropic Claude, Mistral, Google Gemini, ou modèles Ollama en local
+- UI d'administration — dashboard web, widget globe, panneau de contrôle
 
 ---
 
@@ -24,17 +24,17 @@ Jarvis is a personal AI assistant running locally. It exposes a FastAPI server t
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│                  FastAPI server (main.py)             │
+│                  Serveur FastAPI (main.py)            │
 │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐   │
 │  │ /api/ws  │  │ /api/http│  │  /admin (UI)     │   │
 │  └────┬─────┘  └────┬─────┘  └──────────────────┘   │
 │       │              │                                │
 │  ┌────▼──────────────▼──────────────────────────┐   │
 │  │              Gateway  (core/gateway.py)        │   │
-│  │   session ──► Agent ──► LLM ──► Tool calls    │   │
+│  │   session ──► Agent ──► LLM ──► appels outils │   │
 │  └──────────────────────────────────────────────┘   │
 │                                                      │
-│  Memory          Background         Proactive        │
+│  Mémoire         Arrière-plan       Proactif         │
 │  sessions/       scheduler/         engine/          │
 │  topics/         worker/            collectors/      │
 │  consolidation   notifications                       │
@@ -43,31 +43,31 @@ Jarvis is a personal AI assistant running locally. It exposes a FastAPI server t
 voice_agent.py  ──LiveKit──►  STT ──► Gateway ──► TTS
 ```
 
-| Module | Role |
+| Module | Rôle |
 |---|---|
 | `core/` | Agent, Gateway, SessionManager, Router |
-| `llm/` | Provider abstraction (Anthropic, Mistral, Ollama, Gemini) |
-| `memory/` | Sessions, topics, vector index, auto-consolidation |
-| `tools/` | All callable tools (browser, Gmail, Calendar, vision…) |
-| `skills/` | Higher-level pluggable modules |
-| `audio/` | STT, TTS, VAD, wake word, audio chunker |
-| `proactive/` | Background proactive engine + collectors |
-| `background/` | Scheduler, worker, notification queue |
-| `agent/` | Autonomous project/code agent (Docker executor) |
-| `api/` | FastAPI routers (WS, HTTP, admin, voice, globe…) |
+| `llm/` | Abstraction providers (Anthropic, Mistral, Ollama, Gemini) |
+| `memory/` | Sessions, topics, index vectoriel, auto-consolidation |
+| `tools/` | Tous les outils appelables (navigateur, Gmail, Calendar, vision…) |
+| `skills/` | Modules de haut niveau pluggables |
+| `audio/` | STT, TTS, VAD, wake word, chunker audio |
+| `proactive/` | Moteur proactif + collectors |
+| `background/` | Scheduler, worker, file de notifications |
+| `agent/` | Agent projet/code autonome (exécuteur Docker) |
+| `api/` | Routeurs FastAPI (WS, HTTP, admin, voice, globe…) |
 | `config/` | Settings (pydantic-settings), tools.yaml |
-| `prompts/` | System prompt (static + dynamic context) |
+| `prompts/` | Prompt système (partie statique + contexte dynamique) |
 
 ---
 
-## Prerequisites
+## Prérequis
 
-| Tool | Version | Notes |
+| Outil | Version | Notes |
 |---|---|---|
 | Python | 3.11+ | |
-| [uv](https://docs.astral.sh/uv/) | latest | Package manager |
-| [LiveKit](https://livekit.io/) | cloud or self-hosted | Voice pipeline only |
-| Docker | optional | Required by the code-agent feature |
+| [uv](https://docs.astral.sh/uv/) | latest | Gestionnaire de paquets |
+| [LiveKit](https://livekit.io/) | cloud ou self-hosted | Pipeline vocal uniquement |
+| Docker | optionnel | Requis par la fonctionnalité code-agent |
 
 ---
 
@@ -79,131 +79,131 @@ cd jarvis-OS
 bash install.sh
 ```
 
-The script:
-1. Checks Python 3.11+
-2. Installs/updates `uv`
-3. Creates `.venv` and installs all Python dependencies (`pyproject.toml`)
-4. Copies `.env.example` → `.env`
-5. Downloads YOLOv8n model (~6 MB)
-6. Downloads Piper TTS French model (~73 MB)
-7. Creates `memory_data/` and `workspace/` directories
+Le script :
+1. Vérifie Python 3.11+
+2. Installe/met à jour `uv`
+3. Crée `.venv` et installe toutes les dépendances Python (`pyproject.toml`)
+4. Copie `.env.example` → `.env`
+5. Télécharge le modèle YOLOv8n (~6 Mo)
+6. Télécharge le modèle Piper TTS français (~73 Mo)
+7. Crée les dossiers `memory_data/` et `workspace/`
 
 ---
 
 ## Configuration
 
-Edit `.env` — all keys are documented in `.env.example`:
+Édite `.env` — toutes les clés sont documentées dans `.env.example` :
 
 ```bash
-# Minimum to start (text mode, Anthropic)
+# Minimum pour démarrer (mode texte, Anthropic)
 ANTHROPIC_API_KEY=sk-ant-...
 LLM_PROVIDER=api
 
-# Voice pipeline (LiveKit + Deepgram)
-LIVEKIT_URL=wss://your-project.livekit.cloud
+# Pipeline vocal (LiveKit + Deepgram)
+LIVEKIT_URL=wss://ton-projet.livekit.cloud
 LIVEKIT_API_KEY=APIxxx
 LIVEKIT_API_SECRET=xxx
 DEEPGRAM_API_KEY=xxx
 ```
 
-Optional services: ElevenLabs TTS, Mistral, Gemini, AISstream, Spotify.
+Services optionnels : ElevenLabs TTS, Mistral, Gemini, AISstream, Spotify.
 
-**Google integrations (Gmail / Calendar):** place your OAuth `credentials.json` from Google Cloud Console at `config/google_credentials.json`, then start Jarvis — it will open a browser auth flow and save tokens locally (they are gitignored).
+**Intégrations Google (Gmail / Calendar) :** place ton `credentials.json` issu de Google Cloud Console dans `config/google_credentials.json`, puis démarre Jarvis — il ouvrira le flux d'authentification OAuth et sauvegardera les tokens en local (ils sont gitignorés).
 
 ---
 
-## Running
+## Démarrage
 
-**Text + API server:**
+**Serveur texte + API :**
 ```bash
 uv run python main.py
-# Server starts on http://localhost:8000
-# Admin UI: http://localhost:8000/admin
+# Serveur sur http://localhost:8000
+# UI admin : http://localhost:8000/admin
 ```
 
-**Voice agent (LiveKit):**
+**Voice agent (LiveKit) :**
 ```bash
 uv run python voice_agent.py dev
 ```
 
-Both can run simultaneously — the voice agent delegates to the main server's gateway so they share the same session, memory, and tools.
+Les deux peuvent tourner simultanément — le voice agent délègue au gateway du serveur principal, donc ils partagent la même session, la même mémoire et les mêmes outils.
 
 ---
 
-## Available tools
+## Outils disponibles
 
-| Tool | Description |
+| Outil | Description |
 |---|---|
-| `browser` | Web search + page scraping |
-| `gmail` | List recent emails |
-| `calendar` | List / create Google Calendar events |
-| `spotify` | Playback control |
-| `notion` | Search and read pages |
-| `weather` | Current weather (Open-Meteo — no API key needed) |
-| `vision` | Screen capture + YOLOv8 object detection |
-| `filesystem` | Read files, find by pattern |
-| `cli` | Run whitelisted shell commands (configured in `config/tools.yaml`) |
-| `memory` | Write structured notes to topic store |
+| `browser` | Recherche web + scraping de pages |
+| `gmail` | Lister les emails récents |
+| `calendar` | Lister / créer des événements Google Calendar |
+| `spotify` | Contrôle de lecture |
+| `notion` | Rechercher et lire des pages |
+| `weather` | Météo actuelle (Open-Meteo — sans clé API) |
+| `vision` | Capture d'écran + détection d'objets YOLOv8 |
+| `filesystem` | Lire des fichiers, chercher par pattern |
+| `cli` | Lancer des commandes shell whitelistées (configurées dans `config/tools.yaml`) |
+| `memory` | Écrire des notes structurées dans le topic store |
 
 ---
 
-## Memory system
+## Système de mémoire
 
-| Component | What it stores |
+| Composant | Ce qu'il stocke |
 |---|---|
-| `sessions/` | Full conversation history (jsonl per session) |
-| `topics/` | Named long-term notes (written by the assistant) |
-| `conso/` | Daily consumption logs (tokens, cost) |
-| `initiatives/` | Proactive event log |
+| `sessions/` | Historique complet des conversations (jsonl par session) |
+| `topics/` | Notes long-terme nommées (écrites par l'assistant) |
+| `conso/` | Logs de consommation quotidiens (tokens, coût) |
+| `initiatives/` | Log des événements proactifs |
 
-Each night (or on demand), **AutoDream** + **ConsolidationAgent** pass over recent sessions and merge relevant information into topics — similar to how sleep consolidates memory.
+Chaque nuit (ou à la demande), **AutoDream** + **ConsolidationAgent** passent sur les sessions récentes et fusionnent les informations pertinentes dans les topics — l'équivalent du sommeil pour consolider la mémoire.
 
-All memory files live in `memory_data/` which is gitignored and stays on your machine only.
-
----
-
-## Proactive engine
-
-The proactive engine runs in the background and pushes notifications to the connected client via WebSocket. Built-in collectors:
-
-- **Weather** — morning briefing + severe weather alerts
-- **News** — RSS digest on configured topics
-
-Add a new collector in `proactive/collectors/` to extend it.
+Tous les fichiers mémoire vivent dans `memory_data/` qui est gitignorés — ils restent uniquement sur ta machine.
 
 ---
 
-## Development
+## Moteur proactif
+
+Le moteur proactif tourne en arrière-plan et pousse des notifications au client connecté via WebSocket. Collectors intégrés :
+
+- **Météo** — briefing matinal + alertes météo sévères
+- **Actualités** — digest RSS sur des topics configurés
+
+Ajoute un collector dans `proactive/collectors/` pour l'étendre.
+
+---
+
+## Développement
 
 ```bash
-# Run tests
+# Lancer les tests
 uv run pytest
 
 # Lint + format
 uv run ruff check .
 uv run ruff format .
 
-# Manual LLM smoke test
+# Test LLM manuel
 uv run python scripts/test_llm.py --stream
 uv run python scripts/test_llm.py --provider mistral
 ```
 
 ---
 
-## Tech stack
+## Stack technique
 
 - **Python 3.11** — async / FastAPI / uvicorn
-- **Anthropic Claude** (primary LLM) + Mistral / Gemini / Ollama fallbacks
-- **LiveKit Agents** — real-time voice pipeline
-- **Deepgram** — cloud STT / **faster-whisper** — local STT
-- **Piper** — local TTS / **ElevenLabs** — cloud TTS
-- **YOLOv8** (ultralytics) — object detection for vision tool
-- **pydantic-settings** — typed configuration
-- **loguru** — structured logging
-- **uv** — dependency management
+- **Anthropic Claude** (LLM principal) + Mistral / Gemini / Ollama en fallback
+- **LiveKit Agents** — pipeline vocal temps réel
+- **Deepgram** — STT cloud / **faster-whisper** — STT local
+- **Piper** — TTS local / **ElevenLabs** — TTS cloud
+- **YOLOv8** (ultralytics) — détection d'objets pour l'outil vision
+- **pydantic-settings** — configuration typée
+- **loguru** — logging structuré
+- **uv** — gestion des dépendances
 
 ---
 
-## License
+## Licence
 
 MIT
