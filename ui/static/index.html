@@ -1532,7 +1532,7 @@
             <span class="gdp-section-label">Vols en direct</span>
             <span class="gdp-section-count" id="gdp-flight-count">—</span>
             <label class="gdp-switch" title="Afficher / masquer les vols">
-              <input type="checkbox" id="gdp-flights-check" checked
+              <input type="checkbox" id="gdp-flights-check"
                      onchange="Globe.toggleLayer('flights')">
               <span class="gdp-switch-track"></span>
             </label>
@@ -2837,7 +2837,11 @@
       }
       const d = _txDir(window._currentView, 'globe');
       _slideOut(d);
-      setTimeout(() => { if (typeof Globe !== 'undefined') Globe.show(); _setView('globe'); }, DUR_OUT * 1000 * 0.6);
+      setTimeout(() => {
+        if (typeof Globe !== 'undefined') Globe.show();
+        _setView('globe');
+        gsap.to(ui, { duration: 0.35, opacity: 1, x: 0, filter: 'blur(0px)', ease: 'power2.out' });
+      }, DUR_OUT * 1000 * 0.6);
     };
 
     // ── Intel ────────────────────────────────────────────────────────────

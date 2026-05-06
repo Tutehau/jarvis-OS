@@ -61,8 +61,6 @@
       attributionControl: false,
     });
 
-    _map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
-    _map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
     _map.on('mousedown',  () => { _interacting = true;  _map.stop(); _autoRotate = false; });
     _map.on('mouseup',    () => { _interacting = false; _scheduleResume(); });
@@ -106,32 +104,63 @@
     _map?.stop();
   }
 
+  // ── Airplane icon (SDF pour icon-color data-driven) ─────────────
+  function _createPlaneImage() {
+    const sz = 32;
+    const canvas = document.createElement('canvas');
+    canvas.width = sz; canvas.height = sz;
+    const ctx = canvas.getContext('2d');
+    const s = sz / 32;
+    ctx.translate(sz / 2, sz / 2);
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.moveTo(0,        -13 * s); // nez
+    ctx.lineTo(2  * s,   -4 * s); // épaule droite
+    ctx.lineTo(13 * s,    2 * s); // bout aile droite
+    ctx.lineTo(2.5 * s,   4 * s); // racine aile droite
+    ctx.lineTo(2.5 * s,   9 * s); // empennage droit
+    ctx.lineTo(0,         7 * s); // queue centre
+    ctx.lineTo(-2.5 * s,  9 * s); // empennage gauche
+    ctx.lineTo(-2.5 * s,  4 * s); // racine aile gauche
+    ctx.lineTo(-13 * s,   2 * s); // bout aile gauche
+    ctx.lineTo(-2  * s,  -4 * s); // épaule gauche
+    ctx.closePath();
+    ctx.fill();
+    return ctx.getImageData(0, 0, sz, sz);
+  }
+
   // ── GeoJSON layers ───────────────────────────────────────────────
   function _addLayers() {
     const emptyFC = { type: 'FeatureCollection', features: [] };
 
+    _map.addImage('plane-icon', _createPlaneImage(), { sdf: true });
+
     _map.addSource('flights', { type: 'geojson', data: emptyFC });
     _map.addLayer({
-      id: 'flights-layer', type: 'circle', source: 'flights',
-      layout: { visibility: 'none' },
+      id: 'flights-layer', type: 'symbol', source: 'flights',
+      slot: 'top',
+      layout: {
+        visibility: 'none',
+        'icon-image': 'plane-icon',
+        'icon-rotate': ['get', 'heading'],
+        'icon-rotation-alignment': 'map',
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 1, 0.45, 4, 0.65, 10, 1.1],
+      },
       paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 1, 2, 4, 3.5, 10, 6],
-        'circle-color': [
-          'case',
-          ['==', ['slice', ['get', 'callsign'], 0, 3], 'AFR'],
-          '#FFD700',
-          ['interpolate', ['linear'], ['get', 'alt'],
-            0, '#4A9EFF', 4000, '#36D399', 8000, '#FFB547', 11000, '#FF6B4A'],
+        'icon-color': ['case',
+          ['==', ['slice', ['get', 'callsign'], 0, 3], 'AFR'], '#FFD700',
+          '#FFFFFF',
         ],
-        'circle-opacity': 0.82,
-        'circle-stroke-width': 0.5,
-        'circle-stroke-color': 'rgba(74,158,255,0.2)',
+        'icon-opacity': 0.9,
       },
     });
 
     _map.addSource('vessels', { type: 'geojson', data: emptyFC });
     _map.addLayer({
       id: 'vessels-layer', type: 'circle', source: 'vessels',
+      slot: 'top',
       layout: { visibility: 'none' },
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 1, 1.5, 5, 3, 10, 4],
@@ -150,7 +179,7 @@
     return _toFC(flights.map(f => ({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [f.lon, f.lat] },
-      properties: { callsign: f.callsign, alt: f.alt, speed: f.speed },
+      properties: { callsign: f.callsign, alt: f.alt, speed: f.speed, heading: f.heading || 0 },
     })));
   }
 
@@ -313,14 +342,23 @@
   // ── Layer toggles ────────────────────────────────────────────────
   function toggleLayer() {
     _flightsOn = !_flightsOn;
-    if (_layersAdded)
+    if (_layersAdded) {
       _map.setLayoutProperty('flights-layer', 'visibility', _flightsOn ? 'visible' : 'none');
+      if (_flightsOn && _flightsCache.length)
+        _map.getSource('flights')?.setData(_flightsFC(_flightsCache));
+    }
   }
 
   function toggleVessels() {
     _vesselOn = !_vesselOn;
-    if (_layersAdded)
+    if (_layersAdded) {
       _map.setLayoutProperty('vessels-layer', 'visibility', _vesselOn ? 'visible' : 'none');
+      if (_vesselOn) {
+        const vessels = [..._vesselMap.values()];
+        if (vessels.length)
+          _map.getSource('vessels')?.setData(_vesselsFC(vessels));
+      }
+    }
   }
 
   function toggleClouds() { }
