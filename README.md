@@ -230,4 +230,4 @@ uv run python scripts/test_llm.py --provider mistral
 
 ## Licence
 
-MIT
+Proprietary — voir [LICENSE](LICENSE) pour les conditions d'utilisation.
