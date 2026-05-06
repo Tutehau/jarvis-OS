@@ -1,6 +1,18 @@
+<div align="center">
+
+![Jarvis OS](Cover_Jarvis_Github.png)
+
 # Jarvis OS
 
-Assistant personnel IA — texte & voix temps réel, self-hosted, stack open source.
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-async-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![LiveKit](https://img.shields.io/badge/LiveKit-voice-F5A623?style=flat-square)](https://livekit.io)
+[![Claude](https://img.shields.io/badge/Claude-Anthropic-8B5CF6?style=flat-square)](https://anthropic.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](LICENSE)
+
+Assistant personnel IA, texte & voix temps réel, self-hosted, stack open source.
+
+</div>
 
 ---
 
@@ -10,13 +22,13 @@ Jarvis est un assistant personnel IA qui tourne en local. Il expose un serveur F
 
 **Fonctionnalités principales :**
 
-- Pipeline vocal temps réel — STT (Whisper/Deepgram) + LLM + TTS (Piper/ElevenLabs), bridgé via LiveKit
-- Mémoire persistante — sessions, topics, auto-consolidation (passe "rêve" nocturne), recherche vectorielle
-- Utilisation d'outils — navigateur, Gmail, Google Calendar, Notion, Spotify, runner CLI, filesystem, vision (YOLOv8), météo
-- Système de skills — modules autonomes pluggables (ex : chercheur web)
-- Moteur proactif — agent en arrière-plan qui envoie des notifications sur déclencheurs (météo, actualités…)
-- Multi-LLM — Anthropic Claude, Mistral, Google Gemini, ou modèles Ollama en local
-- UI d'administration — dashboard web, widget globe, panneau de contrôle
+- Pipeline vocal temps réel : STT (Whisper/Deepgram) + LLM + TTS (Piper/ElevenLabs), bridgé via LiveKit
+- Mémoire persistante : sessions, topics, auto-consolidation (passe "rêve" nocturne), recherche vectorielle
+- Utilisation d'outils : navigateur, Gmail, Google Calendar, Notion, Spotify, runner CLI, filesystem, vision (YOLOv8), météo
+- Système de skills : modules autonomes pluggables (ex : chercheur web)
+- Moteur proactif : agent en arrière-plan qui envoie des notifications sur déclencheurs (météo, actualités…)
+- Multi-LLM : Anthropic Claude, Mistral, Google Gemini, ou modèles Ollama en local
+- UI d'administration : dashboard web, widget globe, panneau de contrôle
 
 ---
 
@@ -89,7 +101,7 @@ Le wizard interactif :
 7. Télécharge les modèles ML (YOLOv8n, Piper TTS)
 8. Génère le `.env` et installe la commande `jarvis` globalement
 
-> La première fois, utilise `./jarvis eclosion`. Le wizard installe ensuite la commande globalement — tu peux utiliser `jarvis` depuis n'importe où.
+> La première fois, utilise `./jarvis eclosion`. Le wizard installe ensuite la commande globalement, tu peux utiliser `jarvis` depuis n'importe où.
 
 ---
 
@@ -100,7 +112,7 @@ jarvis run      # serveur principal  →  localhost:8000/admin
 jarvis voice    # pipeline vocal LiveKit (optionnel)
 ```
 
-Les deux peuvent tourner simultanément — le voice agent délègue au gateway du serveur principal, donc ils partagent la même session, la même mémoire et les mêmes outils.
+Les deux peuvent tourner simultanément : le voice agent délègue au gateway du serveur principal, donc ils partagent la même session, la même mémoire et les mêmes outils.
 
 ---
 
@@ -116,7 +128,7 @@ Tout est configuré pendant l'éclosion. Pour modifier une clé après coup, éd
 vision/faces/référence.jpg
 ```
 
-Sans cette photo, la séquence de scan s'exécute mais retourne toujours "identité non reconnue". Le dossier `vision/faces/` est gitignorés — ta photo ne sera jamais commitée.
+Sans cette photo, la séquence de scan s'exécute mais retourne toujours "identité non reconnue". Le dossier `vision/faces/` est gitignorés, ta photo ne sera jamais commitée.
 
 ---
 
@@ -129,7 +141,7 @@ Sans cette photo, la séquence de scan s'exécute mais retourne toujours "identi
 | `calendar` | Lister / créer des événements Google Calendar |
 | `spotify` | Contrôle de lecture |
 | `notion` | Rechercher et lire des pages |
-| `weather` | Météo actuelle (Open-Meteo — sans clé API) |
+| `weather` | Météo actuelle (Open-Meteo, sans clé API) |
 | `vision` | Capture d'écran + détection d'objets YOLOv8 |
 | `filesystem` | Lire des fichiers, chercher par pattern |
 | `cli` | Lancer des commandes shell whitelistées (configurées dans `config/tools.yaml`) |
@@ -146,15 +158,15 @@ Sans cette photo, la séquence de scan s'exécute mais retourne toujours "identi
 | `conso/` | Logs de consommation quotidiens (tokens, coût) |
 | `initiatives/` | Log des événements proactifs |
 
-Chaque nuit (ou à la demande), **AutoDream** + **ConsolidationAgent** passent sur les sessions récentes et fusionnent les informations pertinentes dans les topics — l'équivalent du sommeil pour consolider la mémoire.
+Chaque nuit (ou à la demande), **AutoDream** + **ConsolidationAgent** passent sur les sessions récentes et fusionnent les informations pertinentes dans les topics, l'équivalent du sommeil pour consolider la mémoire.
 
-Tous les fichiers mémoire vivent dans `memory_data/` qui est gitignorés — ils restent uniquement sur ta machine.
+Tous les fichiers mémoire vivent dans `memory_data/` qui est gitignorés, ils restent uniquement sur ta machine.
 
 ---
 
 ## Dashboard Monde (World Monitor)
 
-L'onglet **Intel Monde** de l'interface Jarvis affiche [World Monitor](https://github.com/Grominet95/dashboard_monde) — un tableau de bord géopolitique temps réel (globe 3D, flux d'actualités IA, radars financiers, suivi d'infrastructures).
+L'onglet **Intel Monde** de l'interface Jarvis affiche [World Monitor](https://github.com/Grominet95/dashboard_monde), un tableau de bord géopolitique temps réel (globe 3D, flux d'actualités IA, radars financiers, suivi d'infrastructures).
 
 **Prérequis :** Node.js 18+
 
@@ -167,7 +179,7 @@ npm run dev -- --port 3000
 
 Une fois lancé sur `http://localhost:3000`, l'onglet Intel Monde de Jarvis l'affiche automatiquement via iframe. Les deux serveurs peuvent tourner simultanément.
 
-> World Monitor fonctionne sans aucune variable d'environnement pour un usage de base. Des clés API optionnelles (Groq, OpenRouter…) permettent d'activer les fonctionnalités IA avancées — voir le `.env.example` du repo.
+> World Monitor fonctionne sans aucune variable d'environnement pour un usage de base. Des clés API optionnelles (Groq, OpenRouter…) permettent d'activer les fonctionnalités IA avancées, voir le `.env.example` du repo.
 
 ---
 
@@ -175,8 +187,8 @@ Une fois lancé sur `http://localhost:3000`, l'onglet Intel Monde de Jarvis l'af
 
 Le moteur proactif tourne en arrière-plan et pousse des notifications au client connecté via WebSocket. Collectors intégrés :
 
-- **Météo** — briefing matinal + alertes météo sévères
-- **Actualités** — digest RSS sur des topics configurés
+- **Météo** : briefing matinal + alertes météo sévères
+- **Actualités** : digest RSS sur des topics configurés
 
 Ajoute un collector dans `proactive/collectors/` pour l'étendre.
 
@@ -201,15 +213,15 @@ uv run python scripts/test_llm.py --provider mistral
 
 ## Stack technique
 
-- **Python 3.11** — async / FastAPI / uvicorn
+- **Python 3.11** : async / FastAPI / uvicorn
 - **Anthropic Claude** (LLM principal) + Mistral / Gemini / Ollama en fallback
-- **LiveKit Agents** — pipeline vocal temps réel
-- **Deepgram** — STT cloud / **faster-whisper** — STT local
-- **Piper** — TTS local / **ElevenLabs** — TTS cloud
-- **YOLOv8** (ultralytics) — détection d'objets pour l'outil vision
-- **pydantic-settings** — configuration typée
-- **loguru** — logging structuré
-- **uv** — gestion des dépendances
+- **LiveKit Agents** : pipeline vocal temps réel
+- **Deepgram** : STT cloud / **faster-whisper** : STT local
+- **Piper** : TTS local / **ElevenLabs** : TTS cloud
+- **YOLOv8** (ultralytics) : détection d'objets pour l'outil vision
+- **pydantic-settings** : configuration typée
+- **loguru** : logging structuré
+- **uv** : gestion des dépendances
 
 ---
 
